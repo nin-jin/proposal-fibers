@@ -12,10 +12,11 @@
 Pausable stackfull coroutines (fibers) give ability to write simple but responsive and cuncurrently code.
 
 It can be used for:
-1. Automatic pause long task every 16 ms to ensure 60fps.
-2. Concurent execution of different tasks (not serial).
-3. Abort not completed task (with subtasks) as reaction on event.
-4. Abstract of asynchrony. Synchronous code is simplier and can be better optimized by JIT.
+1. Ability to call async code from sync code.
+2. Automatic pause long job every 16 ms to ensure 60fps.
+3. Concurent execution of different long jobs (not serial).
+4. Abort not completed long job (with subjobs) as reaction on event.
+5. Abstract of asynchrony. Synchronous code is simplier and can be better optimized by JIT.
 
 ## API
 
@@ -45,12 +46,32 @@ declare class Fiber< Result > implements PromiseLike< Result > {
 }
 ```
 
+## Special syntax
+
+**`fiber`** keyword can be used to define function that always start new fiber on every call:
+
+```
+fiber function test() {
+    [ 1 , 2 , 3 ].map( i => { // sync map
+    	console.log( Fiber.wait( fetch( `/ping${i}` ) ) )
+    } )
+}
+```
+
+```
+const test = fiber () => {
+    [ 1 , 2 , 3 ].map( i => { // sync map
+    	console.log( Fiber.wait( fetch( `/ping${i}` ) ) )
+    } )
+}
+```
+
 ## Usage examples
 
 - [Quantizing](#quantizing)
-- [JSON processing](#json-processing)
 - [60 FPS rendering](#60-fps-rendering)
 - [Optional Fetch](#optional-fetch)
+- [JSON processing](#json-processing)
 
 ### Quantizing
 
@@ -77,40 +98,6 @@ function quant() {
 	dealine = Date.now() + 8
 
 }
-```
-
-### JSON processing
-
-Quantized json parsing that don't block event loop more than ~8 ms independent on string size:
-
-```typescript
-json_parse( str ) : any {
-	return JSON.parse( str , ( key , value )=> ( quant() , value ) )
-}
-```
-
-Usage:
-
-```typescript
-import { promisify } from 'util'
-import { readFile } from 'fs'
-const readFileAsync = promisify( readFile )
-
-// Some synchronous task
-function log_config() {
-
-	// Load large JSON
-	const buffer = Fiber.wait( fs.readFileASync( 'config.json' ) )
-
-	// Parse json without long thread blocking if can
-	const json = json_parse( buffer )
-
-	// Print json to console
-	console.log( json )
-}
-
-// Spawn fiber
-Fiber.run( log_config )
 ```
 
 ### 60 FPS rendering
@@ -227,6 +214,40 @@ Fiber.run( ()=> {
 	console.log( get_config() )
 
 } )
+```
+
+### JSON processing
+
+Quantized json parsing that don't block event loop more than ~8 ms independent on string size:
+
+```typescript
+json_parse( str ) : any {
+	return JSON.parse( str , ( key , value )=> ( quant() , value ) )
+}
+```
+
+Usage:
+
+```typescript
+import { promisify } from 'util'
+import { readFile } from 'fs'
+const readFileAsync = promisify( readFile )
+
+// Some synchronous task
+function log_config() {
+
+	// Load large JSON
+	const buffer = Fiber.wait( fs.readFileASync( 'config.json' ) )
+
+	// Parse json without long thread blocking if can
+	const json = json_parse( buffer )
+
+	// Print json to console
+	console.log( json )
+}
+
+// Spawn fiber
+Fiber.run( log_config )
 ```
 
 ## Compatibility
